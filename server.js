@@ -23,24 +23,6 @@ function handleFileErrors(req, res) {
 	};
 }
 
-function createFetchFileContentStrategy() {
-	var cache = {};
-
-	return function (req, fetchContent) {
-		var cacheKey = req.verb + ',' + req.url;
-
-		if(cache.hasOwnProperty(cacheKey))
-			return cache[cacheKey];
-
-		var content = fetchContent();
-		cache[cacheKey] = content;
-
-		return content;
-	};
-}
-
-var getFromCache = createFetchFileContentStrategy();
-
 function Cache() {
 }
 

@@ -48,22 +48,7 @@ testRequestForHTMLUrl(this, "/hello/world.html", "hi");
 testRequestForHTMLUrl(this, "/hello/", "<a href=\"/hello/world.html\">world.html</a>");
 testRequestForHTMLUrl(this, "/hello", "<a href=\"/hello/world.html\">world.html</a>");
 testRequest(this, "/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/file-does-not-exist.html - File not found");
-assert.equal("data from file", this.getFromCache(requestForUrl("from-file.html"), function() { return "data from file"; }));
-(function (context) {
-	var timesCalled = {count: 1};
 
-	var returnFromCacheAfterFetchingOnceFromFile = function() {
-		timesCalled.count += 1;
-		assert.equal(1, timesCalled.count);
-		return "data from file";
-	};
-
-	for(var i = 0; i < 3; i++) {
-		assert.equal("data from file", context.getFromCache(requestForUrl("from-file.html"), returnFromCacheAfterFetchingOnceFromFile));
-	}
-
-	assert.equal(1, timesCalled.count);
-})(this);
 (function (context) {
 	var cache = new context.Cache();
 	var req = requestForUrl("/test.html");
