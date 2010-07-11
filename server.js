@@ -56,6 +56,19 @@ function writeHTML(res, content) {
 	res.end();
 }
 
+function formatFileListAsHTML(urlpath, files) {
+	var result = "";
+
+	for(var i in files) {
+		var httpresource = urlpath;
+		result = "<a href=\"" + httpresource;
+		if(!httpresource.endsWith("/")) result += "/";
+		result += files[i] + "\">" + files[i] + "</a>";
+	}
+
+	return result;
+}
+
 function requestprocessor(req, res) {
 	var fileresource = "." + req.url;
 	sys.log(req.url);
@@ -74,16 +87,7 @@ function requestprocessor(req, res) {
 			}
 			else if (stats.isDirectory()) {
 				fs.readdir(fileresource, withErrorHandling(function(files) {
-					var result = "";
-
-					for(var i in files) {
-						var httpresource = req.url;
-						result = "<a href=\"" + httpresource;
-						if(!httpresource.endsWith("/")) result += "/";
-						result += files[i] + "\">" + files[i] + "</a>";
-					}
-
-					writeHTML(res, result);
+					writeHTML(res, formatFileListAsHTML(req.url, files));
 				}));
 			}
 		}));
