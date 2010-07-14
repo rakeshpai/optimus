@@ -1,6 +1,7 @@
 var sys = require('sys');
 var fs = require('fs');
 var http = require('http');
+
 var htmlContentHeaders = {"Content-Type": "text/html"};
 var HTTP_STATUS_OK = 200;
 
@@ -30,18 +31,18 @@ function Cache() {
 	var cache = {};
 	
 	function cacheKey(req) {
-		return req.verb + ',' + req.url;
+		return req.method + ',' + req.url;
 	}
 	
 	Cache.prototype = {
 		has: function(req) {
 			return cache.hasOwnProperty(cacheKey(req));
 		},
-		
+
 		add: function(req, value) {
 			cache[cacheKey(req)] = value;
 		},
-		
+
 		get: function(req) {
 			return cache[cacheKey(req)];
 		}
@@ -69,33 +70,47 @@ function formatFileListAsHTML(urlpath, files) {
 	return result;
 }
 
-function requestprocessor(req, res) {
+function fileSystemRequestProcessor(req, res) {
 	var fileresource = "." + req.url;
-	sys.log(req.url);
 
 	var withErrorHandling = handleFileErrors(req, res);
 
-	if(cache.has(req)) {
+	fs.stat(fileresource, withErrorHandling(function(stats) {
+		if(stats.isFile()) {
+			fs.readFile(fileresource, "utf-8", withErrorHandling(function (data) {
+				cache.add(req, data);
+				writeHTML(res, data);
+			}));
+		}
+		else if (stats.isDirectory()) {
+			fs.readdir(fileresource, withErrorHandling(function(files) {
+				var content = formatFileListAsHTML(req.url, files);
+				cache.add(req, content);
+				writeHTML(res, content);
+			}));
+		}
+	}));
+}
+
+function cachingRequestProcessor (req, res, nextHandler) {
+	if(cache.has(req))
+	{
+		sys.log("Cached: " + req.method + " " + req.url)
 		writeHTML(res, cache.get(req));
 	}
-	else {
-		fs.stat(fileresource, withErrorHandling(function(stats) {
-			if(stats.isFile()) {
-				fs.readFile(fileresource, "utf-8", withErrorHandling(function (data) {
-					writeHTML(res, data);
-				}));
-			}
-			else if (stats.isDirectory()) {
-				fs.readdir(fileresource, withErrorHandling(function(files) {
-					writeHTML(res, formatFileListAsHTML(req.url, files));
-				}));
-			}
-		}));
+	else
+	{
+		sys.log(req.url);
+		nextHandler(req, res);
 	}
 }
 
+function requestProcessor(req, res) {
+	cachingRequestProcessor(req, res, fileSystemRequestProcessor);
+}
+
 var startServer = exports.startServer = function(ip, port) {
-	http.createServer(requestprocessor).listen(port, ip);
+	http.createServer(requestProcessor).listen(port, ip);
 }
 
 exports.defaultLocalServer = function () {
