@@ -119,8 +119,8 @@ testRequest("/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/
 		servermodule.cachingRequestProcessor(requestForUrl("cached-data.html"), fakeResponseStream(200, htmlContentTypeResponseHeader, "cached data"), nextHandler);
 	}
 
-	setTimeout(function () { assert.equal(1, timesItHappened); }, 0);
+	assert.equal(1, timesItHappened);
 
 	servermodule.fileSystemRequestProcessor(requestForUrl("/test.html"), fakeResponseStream(200, htmlContentTypeResponseHeader, "test data"));
-	setTimeout(function () { assert.ok(servermodule.cache.has(requestForUrl("/test.html"))); }, 0);
+	assert.ok(servermodule.cache.has(requestForUrl("/test.html")));
 })();
