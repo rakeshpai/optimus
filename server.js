@@ -1,5 +1,5 @@
 var sys = require('sys');
-var fs = require('fs');
+var fs = fs || require('fs');
 var http = require('http');
 
 var htmlContentHeaders = {"Content-Type": "text/html"};
@@ -7,11 +7,22 @@ var HTTP_STATUS_OK = 200;
 
 String.prototype.endsWith = function(str) {return (this.match(str+"$")==str)}
 
+function toS(obj) {
+	var data = "";
+	
+	for(key in obj) {
+		if (data.length > 0) data += "; ";
+		data += key + '=' + obj[key];
+	}
+	
+	return data;
+}
+
 function handleFileErrors(req, res) {
 	return function (fn) {
 		return function (err, data) {
 			if (err) {
-				sys.log("ERROR: " + err);
+				sys.log("ERROR: " + toS(err));
 
 				res.writeHead(404, {"Content-Type": "text/plain"});
 				res.write(req.url + " - File not found");

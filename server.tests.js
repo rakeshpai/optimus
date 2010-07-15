@@ -4,7 +4,50 @@ var assert = require('assert');
 
 var mixin = require('./mixin');
 
-var servermodule = mixin.mix("./server.js", {});
+function fileSystemErrorMessage(path) {
+	return {
+		message: "ENOENT, No such file or directory '" + path + "'",
+		errno: 2,
+		path: path,
+		name: "Error"
+	};
+}
+
+var fakeFileSystem = {
+	stat: function(name, callback) {
+		if(name == "./test.html" ||
+		   name == "./hello/world.html") {
+			callback(undefined, { isDirectory: function () { return true; }, isFile: function () { return true; }});
+		}
+		else if (name == "./hello" ||
+		         name == "./hello/") {
+			callback(undefined, { isDirectory: function () { return true; }, isFile: function () { return false; }});
+		}
+		else {
+			callback(new fileSystemErrorMessage(name), undefined);
+		}
+	},
+
+	readFile: function(path) {
+		var callback = arguments[1];
+
+		if(arguments.length == 3)
+			callback = arguments[2];
+
+		if(path == "./test.html")
+			callback(undefined, "test data");
+		else if (path == "./hello/world.html")
+			callback(undefined, "hi");
+		else
+			callback(new fakeFileSystem(path), undefined);
+	},
+	
+	readdir: function(path, callback) {
+		callback(undefined, ["world.html"]);
+	}
+};
+
+var servermodule = mixin.mix("./server.js", {fs: fakeFileSystem});
 
 function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
 	var seenStatusAndHeaders, seenBody;
