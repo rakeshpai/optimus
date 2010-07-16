@@ -1,0 +1,3 @@
+[submodule "html-minifier"]
+	path = html-minifier
+	url = git@github.com:finalprefix/html-minifier.git
