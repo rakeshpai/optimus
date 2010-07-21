@@ -121,7 +121,8 @@ function requestProcessor(req, res) {
 }
 
 var startServer = exports.startServer = function(ip, port) {
-	http.createServer(requestProcessor).listen(port, ip);
+	http.createServer(require('./proxy').proxy_request_handler).listen(port, ip);
+	console.log("Started http server on " + ip + ":" + port)
 }
 
 exports.defaultLocalServer = function () {
