@@ -6,7 +6,7 @@ require.paths.unshift("./lib");
 
 var mixin = require('mixin');
 
-var proxymodule = mixin.mix('../src/proxy.js', {});
+var proxymodule = mixin.mix('./src/proxy.js', {});
 
 function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
 	var seenStatusAndHeaders, seenBody;
@@ -35,35 +35,45 @@ function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
 	};
 }
 
-var serverResponse = fakeResponseStream(200, {"Content-Type": "text/plain"}, "test");
-var clientResponse = {statusCode: 200, body: "test", headers: {"Content-Type": "text/plain"}};
-proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-assert.ok(serverResponse.ended());
+exports['The proxy should work with plain text'] = function () {
+	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/plain"}, "test");
+	var clientResponse = {statusCode: 200, body: "test", headers: {"Content-Type": "text/plain"}};
+	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+};
 
-var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>");
-var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
-proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-assert.ok(serverResponse.ended());
+exports['The proxy should work with plain text'] = function () {
+	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>");
+	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
+	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+};
 
-var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<a href=test.html\>test</a>");
-var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"Content-Type": "text/html"}};
-proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-assert.ok(serverResponse.ended());
+exports['HTML content should be minified.'] = function () {
+	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<a href=test.html\>test</a>");
+	var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"Content-Type": "text/html"}};
+	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+};
 
-var serverResponse = fakeResponseStream(200, {"Content-Type": "TEXT/HTML"}, "<a href=test.html>test</a>");
-var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"Content-Type": "TEXT/HTML"}};
-proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-assert.ok(serverResponse.ended());
+exports['All headers in the response to the proxied request should be sent to the client'] = function () {
+	var serverResponse = fakeResponseStream(200, {"Content-Type": "TEXT/HTML"}, "<a href=test.html>test</a>");
+	var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"Content-Type": "TEXT/HTML"}};
+	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+};
 
-var serverResponse = fakeResponseStream(200, {"content-type": "TEXT/HTML"}, "<a href=test.html>test</a>");
-var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"content-type": "TEXT/HTML"}};
-proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-assert.ok(serverResponse.ended());
+exports['The Content-Type header should be found even if it\'s all in small case.'] = function () {
+	var serverResponse = fakeResponseStream(200, {"content-type": "TEXT/HTML"}, "<a href=test.html>test</a>");
+	var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"content-type": "TEXT/HTML"}};
+	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+};
 
-(function() {
-	var proxymodule = mixin.mix('../src/proxy.js', {});
+exports['A request should attempt to proxy the request if not cached, else attempt to serve the cached response.'] = function() {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
 	var cache = proxymodule.cache;
-	
+
 	var serverResponse = fakeResponseStream(200, {"content-type": "TEXT/HTML"}, "<a href=test.html>test</a>");
 	var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"content-type": "TEXT/HTML"}};
 	var called = [];
@@ -73,12 +83,12 @@ assert.ok(serverResponse.ended());
 
 	proxymodule.process_request({url: "/check-cached", host: "test.com"}, serverResponse, ifCached, ifNotCached);
 	proxymodule.process_request({url: "/check-cached", host: "test.com"}, serverResponse, ifCached, ifNotCached);
-	
-	assert.equal("cached", called[1]);
-})();
 
-(function() {
-	var proxymodule = mixin.mix('../src/proxy.js', {});
+	assert.equal("cached", called[1]);
+};
+
+exports['A cached response gets correctly served by the cached response handler.'] = function() {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
 	var cache = proxymodule.cache;
 
 	var request = {url: "/test", host: "test.com"};
@@ -88,16 +98,17 @@ assert.ok(serverResponse.ended());
 
 	proxymodule.cached_response(request, serverResponse);
 	assert.ok(serverResponse.ended());
-})();
+};
 
-(function () {
-	var proxymodule = mixin.mix('../src/proxy.js', {});
+exports['A response not yet cached is cached immediately.'] = function () {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
 	var cache = proxymodule.cache;
-	
+
 	var request = {url: "/test10", host: "test.com"};
 	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>");
 	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
+
 	proxymodule.process_response(request, clientResponse, serverResponse);
 	assert.ok(serverResponse.ended());
 	assert.equal("<h1>test</h1>", cache.get(request));
-})();
+};
