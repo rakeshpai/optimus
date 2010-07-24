@@ -1,6 +1,7 @@
 var sys = require('sys');
 var fs = fs || require('fs');
 var http = require('http');
+var Cache = require('./cache').Cache;
 
 var htmlContentHeaders = {"Content-Type": "text/html"};
 var HTTP_STATUS_OK = 200;
@@ -34,31 +35,6 @@ function handleFileErrors(req, res) {
 		};
 	};
 }
-
-function Cache() {
-}
-
-(function () {
-	var cache = {};
-	
-	function cacheKey(req) {
-		return req.method + ',' + req.url;
-	}
-	
-	Cache.prototype = {
-		has: function(req) {
-			return cache.hasOwnProperty(cacheKey(req));
-		},
-
-		add: function(req, value) {
-			cache[cacheKey(req)] = value;
-		},
-
-		get: function(req) {
-			return cache[cacheKey(req)];
-		}
-	};
-})();
 
 var cache = new Cache();
 
