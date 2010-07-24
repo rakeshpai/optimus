@@ -50,7 +50,7 @@ var fakeFileSystem = {
 	}
 };
 
-var servermodule = mixin.mix("../src/server.js", {fs: fakeFileSystem});
+var servermodule = mixin.mix("./src/server.js", {fs: fakeFileSystem});
 
 function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
 	var seenStatusAndHeaders, seenBody;
@@ -97,13 +97,27 @@ var testRequestForHTMLUrl = (function (context) {
 	};
 })(servermodule);
 
-testRequestForHTMLUrl("/test.html", "test data");
-testRequestForHTMLUrl("/hello/world.html", "hi");
-testRequestForHTMLUrl("/hello/", "<a href=\"/hello/world.html\">world.html</a>");
-testRequestForHTMLUrl("/hello", "<a href=\"/hello/world.html\">world.html</a>");
-testRequest("/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/file-does-not-exist.html - File not found");
+exports['When requested for a file named /test.html the response should be \'test data\''] = function () {
+	testRequestForHTMLUrl("/test.html", "test data");
+};
 
-(function () {
+exports['When requested for an html file named /hello/world.html the response should be \'hi\''] = function () {
+	testRequestForHTMLUrl("/hello/world.html", "hi");
+};
+
+exports['When requested for /hello/ the response should be a listing of this directory.'] = function () {
+	testRequestForHTMLUrl("/hello/", "<a href=\"/hello/world.html\">world.html</a>");
+};
+
+exports['When requested for /hello (without the trailing slash) the response should be a listing of this directory.'] = function () {
+	testRequestForHTMLUrl("/hello", "<a href=\"/hello/world.html\">world.html</a>");
+};
+
+exports['If a requested file does not exist, the response should be a 404.'] = function () {
+	testRequest("/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/file-does-not-exist.html - File not found");
+};
+
+exports['If requested for a cached url, the cached response should be returned.'] = function () {
 	var cache = new servermodule.Cache();
 	var req = requestForUrl("/test.html");
 
@@ -111,9 +125,9 @@ testRequest("/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/
 
 	assert.ok(cache.has(req));
 	assert.equal("test cached data", cache.get(req));
-})();
+};
 
-(function () {
+exports['When a request for an uncached url is received, it should be cached immediately. After that, the cached response should be returned.'] = function () {
 	var timesItHappened = 0;
 
 	var nextHandler = function(req, res) { servermodule.cache.add(req, "cached data"); timesItHappened ++; assert.equal(1, timesItHappened); };
@@ -126,4 +140,4 @@ testRequest("/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/
 
 	servermodule.fileSystemRequestProcessor(requestForUrl("/test.html"), fakeResponseStream(200, htmlContentTypeResponseHeader, "test data"));
 	assert.ok(servermodule.cache.has(requestForUrl("/test.html")));
-})();
+};
