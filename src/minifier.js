@@ -1,8 +1,8 @@
-var mixin = require('./mixin');
+var mixin = require('mixin');
 
-var minifier = mixin.mix('./minifier/htmlparser.js', {});
-minifier = mixin.mix('./minifier/htmllint.js', minifier);
-minifier = mixin.mix('./minifier/htmlminifier.js', minifier);
+var minifier = mixin.mix('../lib/minifier/htmlparser.js', {});
+minifier = mixin.mix('../lib/minifier/htmllint.js', minifier);
+minifier = mixin.mix('../lib/minifier/htmlminifier.js', minifier);
 
 var options = {
 	removeEmptyElements: true,

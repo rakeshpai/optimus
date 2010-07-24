@@ -1,0 +1,6 @@
+#!/usr/local/bin/node
+
+require.paths.unshift("./src");
+require.paths.unshift("./lib");
+
+require('server').defaultLocalServer('127.0.0.1', 8080);

@@ -1,8 +1,8 @@
 var sys = require('sys');
 var http = require('http');
-var server = require('./server');
-var minifier = require('./minifier');
-var Cache = require('./cache').Cache;
+var server = require('server');
+var minifier = require('minifier');
+var Cache = require('cache').Cache;
 var cache = new Cache();
 
 exports.proxy_request_handler = function (request, response) {

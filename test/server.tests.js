@@ -2,7 +2,10 @@ var fs = require('fs');
 var sys = require('sys');
 var assert = require('assert');
 
-var mixin = require('./mixin');
+require.paths.unshift("./src");
+require.paths.unshift("./lib");
+
+var mixin = require('mixin');
 
 function fileSystemErrorMessage(path) {
 	return {
@@ -41,23 +44,23 @@ var fakeFileSystem = {
 		else
 			callback(new fakeFileSystem(path), undefined);
 	},
-	
+
 	readdir: function(path, callback) {
 		callback(undefined, ["world.html"]);
 	}
 };
 
-var servermodule = mixin.mix("./server.js", {fs: fakeFileSystem});
+var servermodule = mixin.mix("../src/server.js", {fs: fakeFileSystem});
 
 function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
 	var seenStatusAndHeaders, seenBody;
 	var ended = false;
-	
+
 	return {
 		writeHead: function(status, headers) {
 			assert.equal(expectedStatus, status);
 			assert.deepEqual(expectedHead, headers);
-			
+
 			seenStatusAndHeaders = true;
 		},
 

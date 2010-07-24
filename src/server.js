@@ -1,7 +1,7 @@
 var sys = require('sys');
 var fs = fs || require('fs');
 var http = require('http');
-var Cache = require('./cache').Cache;
+var Cache = require('cache').Cache;
 
 var htmlContentHeaders = {"Content-Type": "text/html"};
 var HTTP_STATUS_OK = 200;

@@ -1,7 +1,12 @@
 var sys = require('sys');
-var mixin = require('./mixin');
 var assert = require('assert');
-var proxymodule = mixin.mix('./proxy.js', {});
+
+require.paths.unshift("./src");
+require.paths.unshift("./lib");
+
+var mixin = require('mixin');
+
+var proxymodule = mixin.mix('../src/proxy.js', {});
 
 function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
 	var seenStatusAndHeaders, seenBody;
@@ -56,7 +61,7 @@ proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, s
 assert.ok(serverResponse.ended());
 
 (function() {
-	var proxymodule = mixin.mix('./proxy.js', {});
+	var proxymodule = mixin.mix('../src/proxy.js', {});
 	var cache = proxymodule.cache;
 	
 	var serverResponse = fakeResponseStream(200, {"content-type": "TEXT/HTML"}, "<a href=test.html>test</a>");
@@ -73,7 +78,7 @@ assert.ok(serverResponse.ended());
 })();
 
 (function() {
-	var proxymodule = mixin.mix('./proxy.js', {});
+	var proxymodule = mixin.mix('../src/proxy.js', {});
 	var cache = proxymodule.cache;
 
 	var request = {url: "/test", host: "test.com"};
@@ -86,7 +91,7 @@ assert.ok(serverResponse.ended());
 })();
 
 (function () {
-	var proxymodule = mixin.mix('./proxy.js', {});
+	var proxymodule = mixin.mix('../src/proxy.js', {});
 	var cache = proxymodule.cache;
 	
 	var request = {url: "/test10", host: "test.com"};
