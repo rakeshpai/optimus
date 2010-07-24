@@ -101,6 +101,6 @@ var startServer = exports.startServer = function(ip, port) {
 	console.log("Started http server on " + ip + ":" + port)
 }
 
-exports.defaultLocalServer = function () {
-	startServer('127.0.0.1', 8080);
+exports.defaultLocalServer = function (ip, port) {
+	startServer(ip, port);
 }
