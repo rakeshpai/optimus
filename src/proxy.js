@@ -4,6 +4,7 @@ var server = require("server");
 var minifier = require("minifier");
 var Cache = require("cache").Cache;
 var cache = new Cache();
+var Buffer = require("buffer").Buffer;
 
 exports.proxy_request_handler = function (request, response) {
 	console.log("http://" + request.headers["host"] + " -- " + request.url);
@@ -13,22 +14,36 @@ exports.proxy_request_handler = function (request, response) {
 
 	var strategyIfCached = cached_response;
 	var strategyIfNotCached = function () {
-		proxy_request.addListener("response", function (proxy_response) {
-			var responseBody = "";
+		proxy_request.on("response", function (proxy_response) {
+			var bufferSize = 64 * 1024;
+			var bufferPos = 0;
+			var buffer = new Buffer(bufferSize);
+			
+			proxy_response.setEncoding("binary");
 
-			proxy_response.addListener("data", function(chunk) {
-				responseBody = responseBody + chunk;
+			proxy_response.on("data", function(chunk) {
+				var bufferNextPos = bufferPos + chunk.length;
+				if(bufferNextPos > bufferSize) {
+					sys.puts("Current buffer size: " + bufferSize);
+					bufferSize = (Math.ceil(bufferNextPos / (64*1024)) + 1) * 64 * 1024;	// Add units of 64 KiB to accomodate the chunk
+					sys.puts("Buffer size bumped up to : " + bufferSize)
+					var tempBufferValue = buffer.toString("binary", 0, bufferPos);
+					buffer = new Buffer(bufferSize);
+					buffer.write(tempBufferValue, "binary");
+				}
+				buffer.write(chunk, "binary", bufferPos);
+				bufferPos += chunk.length;
 			});
-			proxy_response.addListener("end", function() {
-				proxy_response.body = responseBody;
+			proxy_response.on("end", function() {
+				proxy_response.body = buffer.toString("binary", 0, bufferPos);
 				process_response(request, proxy_response, response);
 			});
 		});
 
-		request.addListener("data", function(chunk) {
+		request.on("data", function(chunk) {
 			proxy_request.write(chunk, "binary");
 		});
-		request.addListener("end", function() {
+		request.on("end", function() {
 			proxy_request.end();
 		});
 	};
