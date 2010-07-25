@@ -54,7 +54,7 @@ exports.proxy_request_handler = function (request, response) {
 function cached_response (request, response) {
 	console.log("Delivered from cache: " + request.host + " -- " + request.url)
 	response.writeHead(200, {"Content-Type": "text/html"});
-	response.write(cache.get(request));
+	response.write(cache.get(request), "binary");
 	response.end();
 };
 
@@ -90,7 +90,7 @@ function process_response(request, clientResponse, serverResponse) {
 	serverResponse.writeHead(clientResponse.statusCode, clientResponse.headers);
 	var content = transformContent(findValue(clientResponse.headers, "content-type"), clientResponse.body);
 	cache.add(request, content);
-	serverResponse.write(content);
+	serverResponse.write(content, "binary");
 	serverResponse.end();
 }
 
