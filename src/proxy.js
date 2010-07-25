@@ -1,39 +1,39 @@
-var sys = require('sys');
-var http = require('http');
-var server = require('server');
-var minifier = require('minifier');
-var Cache = require('cache').Cache;
+var sys = require("sys");
+var http = require("http");
+var server = require("server");
+var minifier = require("minifier");
+var Cache = require("cache").Cache;
 var cache = new Cache();
 
 exports.proxy_request_handler = function (request, response) {
-  console.log("http://" + request.headers['host'] + ' -- ' + request.url);
+	console.log("http://" + request.headers["host"] + " -- " + request.url);
 
-  var proxy = http.createClient(80, request.headers['host']);
-  var proxy_request = proxy.request(request.method, request.url, request.headers);
+	var proxy = http.createClient(80, request.headers["host"]);
+	var proxy_request = proxy.request(request.method, request.url, request.headers);
 
-  var strategyIfCached = cached_response;
-  var strategyIfNotCached = function () {
-	  proxy_request.addListener('response', function (proxy_response) {
-		var responseBody = "";
+	var strategyIfCached = cached_response;
+	var strategyIfNotCached = function () {
+		proxy_request.addListener("response", function (proxy_response) {
+			var responseBody = "";
 
-	    proxy_response.addListener('data', function(chunk) {
-	      responseBody = responseBody + chunk;
-	    });
-	    proxy_response.addListener('end', function() {
-		  proxy_response.body = responseBody;
-	      process_response(request, proxy_response, response);
-	    });
-	  });
+			proxy_response.addListener("data", function(chunk) {
+				responseBody = responseBody + chunk;
+			});
+			proxy_response.addListener("end", function() {
+				proxy_response.body = responseBody;
+				process_response(request, proxy_response, response);
+			});
+		});
 
-	  request.addListener('data', function(chunk) {
-	    proxy_request.write(chunk, 'binary');
-	  });
-	  request.addListener('end', function() {
-	    proxy_request.end();
-	  });
-  };
+		request.addListener("data", function(chunk) {
+			proxy_request.write(chunk, "binary");
+		});
+		request.addListener("end", function() {
+			proxy_request.end();
+		});
+	};
 
-  process_request(request, response, strategyIfCached, strategyIfNotCached);
+	process_request(request, response, strategyIfCached, strategyIfNotCached);
 }
 
 function cached_response (request, response) {
@@ -44,7 +44,7 @@ function cached_response (request, response) {
 };
 
 var transformContent = function (type, content) {
-	type = type.toLowerCase();
+	type = type.toLowerCase().split(";")[0]; // Content type could include encoding, seperated by a ";"
 	
 	var transformers = {
 		"text/html": function (html) {
@@ -52,8 +52,9 @@ var transformContent = function (type, content) {
 		}
 	};
 	
-	if (transformers[type])
-			return transformers[type](content);
+	if (transformers[type]) {
+		return transformers[type](content);
+	}
 	
 	return content;
 }
@@ -62,8 +63,9 @@ function findValue(headers, name) {
 	name = name.toLowerCase();
 	
 	for(var header in headers) {
-		if (header.toLowerCase() == name)
+		if (header.toLowerCase() == name) {
 			return headers[header];
+		}
 	}
 	
 	throw "Couldn't find header";
@@ -78,8 +80,9 @@ function process_response(request, clientResponse, serverResponse) {
 }
 
 function process_request(request, response, ifCached, ifNotCached) {
-	if(cache.has(request))
+	if(cache.has(request)) {
 		ifCached(request, response);
-	else
+	} else {
 		ifNotCached(request, response);
+	}
 }
