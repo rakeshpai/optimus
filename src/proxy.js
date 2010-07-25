@@ -63,7 +63,15 @@ var transformContent = function (type, content) {
 	
 	var transformers = {
 		"text/html": function (html) {
-			return minifier.minify(html);
+			var settings = server.getSettings();
+			if(settings.enableHtmlMinification) {
+				var startTime = new Date();
+				var minified = minifier.minify(html, server.getSettings().htmlMinifier);
+				sys.puts("Time taken to minify: " + (new Date() - startTime) + "ms. Savings: " + ((html.length-minified.length) * 100/html.length).toFixed(2) + "%");
+				return minified;
+			} else {
+				return html;
+			}
 		}
 	};
 	
@@ -83,7 +91,7 @@ function findValue(headers, name) {
 		}
 	}
 	
-	throw "Couldn't find header";
+	return "";
 }
 
 function process_response(request, clientResponse, serverResponse) {

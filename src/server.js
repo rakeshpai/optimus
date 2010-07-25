@@ -99,8 +99,57 @@ function requestProcessor(req, res) {
 var startServer = exports.startServer = function(ip, port) {
 	http.createServer(require('./proxy').proxy_request_handler).listen(port, ip);
 	console.log("Started http server on " + ip + ":" + port)
-}
+};
 
-exports.defaultLocalServer = function (ip, port) {
-	startServer(ip, port);
-}
+var customSettings = null;
+
+var defaultSettings = {
+	proxy: {
+		ip: "127.0.0.1",
+		port: "8080"
+	},
+	
+	enableHtmlMinification: true,
+	
+	htmlMinifier: {
+		removeComments: true,
+		removeCommentsFromCDATA: true,
+		removeCDATASectionsFromCDATA: true,
+		collapseWhitespace: false,
+		collapseBooleanAttributes: true,
+		removeAttributeQuotes: true,
+		removeRedundantAttributes: true,
+		useShortDoctype: true,
+		removeEmptyAttributes: true,
+		removeEmptyElements: false,
+		removeOptionalTags: true,
+		removeScriptTypeAttributes: true
+	}
+};
+
+exports.getSettings = function() {
+	if(!customSettings) {
+		customSettings = {};
+
+		try {
+			fs.readFileSync(process.argv[2] || "./settings.json");
+			try {
+				customSettings = JSON.parse(data.toString("utf-8", 0, data.length));
+			} catch(e) {
+				sys.puts("Error parsing settings.json: " + e);
+				process.exit(1);
+			}
+		} catch(e) {
+			sys.puts("No settings.json found. Using default settings.");
+		}
+
+		customSettings.__proto__ = defaultSettings;
+	}
+	
+	return customSettings;
+};
+
+exports.defaultLocalServer = function () {
+	var settings = exports.getSettings();
+	startServer(settings.proxy.ip, settings.proxy.port);
+};
