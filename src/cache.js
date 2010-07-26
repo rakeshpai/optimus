@@ -13,11 +13,11 @@ function Cache() {
 			return cache.hasOwnProperty(cacheKey(req));
 		},
 
-		add: function(req, value) {
+		addBody: function(req, value) {
 			cache[cacheKey(req)] = value;
 		},
 
-		get: function(req) {
+		getBody: function(req) {
 			return cache[cacheKey(req)];
 		}
 	};
