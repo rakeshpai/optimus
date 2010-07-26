@@ -121,16 +121,16 @@ exports['If requested for a cached url, the cached response should be returned.'
 	var cache = new servermodule.Cache();
 	var req = requestForUrl("/test.html");
 
-	cache.add(req, "test cached data");
+	cache.addBody(req, "test cached data");
 
 	assert.ok(cache.has(req));
-	assert.equal("test cached data", cache.get(req));
+	assert.equal("test cached data", cache.getBody(req));
 };
 
 exports['When a request for an uncached url is received, it should be cached immediately. After that, the cached response should be returned.'] = function () {
 	var timesItHappened = 0;
 
-	var nextHandler = function(req, res) { servermodule.cache.add(req, "cached data"); timesItHappened ++; assert.equal(1, timesItHappened); };
+	var nextHandler = function(req, res) { servermodule.cache.addBody(req, "cached data"); timesItHappened ++; assert.equal(1, timesItHappened); };
 
 	for(var i = 0; i < 2; i ++) {
 		servermodule.cachingRequestProcessor(requestForUrl("cached-data.html"), fakeResponseStream(200, htmlContentTypeResponseHeader, "cached data"), nextHandler);

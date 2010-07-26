@@ -79,7 +79,7 @@ exports['A request should attempt to proxy the request if not cached, else attem
 	var called = [];
 
 	var ifCached = function (serverRequest, serverResponse) { assert.equal("notcached", called[0]); called[called.length] = "cached"; };
-	var ifNotCached = function (serverRequest, serverResponse) { called[called.length] = "notcached"; cache.add(serverRequest); };
+	var ifNotCached = function (serverRequest, serverResponse) { called[called.length] = "notcached"; cache.addBody(serverRequest); };
 
 	proxymodule.process_request({url: "/check-cached", host: "test.com"}, serverResponse, ifCached, ifNotCached);
 	proxymodule.process_request({url: "/check-cached", host: "test.com"}, serverResponse, ifCached, ifNotCached);
@@ -92,7 +92,7 @@ exports['A cached response gets correctly served by the cached response handler.
 	var cache = proxymodule.cache;
 
 	var request = {url: "/test", host: "test.com"};
-	cache.add(request, "<a href=test.html>test</a>");
+	cache.addBody(request, "<a href=test.html>test</a>");
 
 	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<a href=test.html>test</a>");
 
@@ -110,5 +110,5 @@ exports['A response not yet cached is cached immediately.'] = function () {
 
 	proxymodule.process_response(request, clientResponse, serverResponse);
 	assert.ok(serverResponse.ended());
-	assert.equal("<h1>test</h1>", cache.get(request));
+	assert.equal("<h1>test</h1>", cache.getBody(request));
 };
