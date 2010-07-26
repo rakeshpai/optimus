@@ -113,7 +113,6 @@ function process_response(request, clientResponse, serverResponse) {
 
 		headers['Etag'] = etag;
 
-		cache.addBody(request, content);
 		serverResponse.writeHead(clientResponse.statusCode, headers);
 	}
 
