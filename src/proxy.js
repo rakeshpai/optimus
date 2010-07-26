@@ -1,9 +1,12 @@
-var sys = require("sys");
-var http = require("http");
-var server = require("server");
-var minifier = require("minifier");
-var Cache = require("cache").Cache;
+var sys = require('sys');
+var http = require('http');
+var server = require('server');
+var minifier = require('minifier');
+var Cache = require('cache').Cache;
+var hash = require('hash');
+
 var cache = new Cache();
+
 var Buffer = require("buffer").Buffer;
 
 exports.proxy_request_handler = function (request, response) {
@@ -95,8 +98,16 @@ function findValue(headers, name) {
 }
 
 function process_response(request, clientResponse, serverResponse) {
-	serverResponse.writeHead(clientResponse.statusCode, clientResponse.headers);
 	var content = transformContent(findValue(clientResponse.headers, "content-type"), clientResponse.body);
+	var etag = hash.hashOf(content);
+
+	var headers = {}
+	for (var key in clientResponse.headers)
+		headers[key] = clientResponse.headers[key];
+
+	headers['Etag'] = etag;
+	
+	serverResponse.writeHead(clientResponse.statusCode, headers);
 	cache.addBody(request, content);
 	serverResponse.write(content, "binary");
 	serverResponse.end();

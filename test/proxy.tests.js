@@ -8,15 +8,16 @@ var mixin = require('mixin');
 
 var proxymodule = mixin.mix('./src/proxy.js', {});
 
-function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
+function fakeResponseStream(expectedStatus, expectedHeaders, expectedBody) {
 	var seenStatusAndHeaders, seenBody;
 	var ended = false;
 	
 	return {
 		writeHead: function(status, headers) {
 			assert.equal(expectedStatus, status);
-			assert.deepEqual(expectedHead, headers);
-			
+			for(var key in expectedHeaders)
+				assert.deepEqual(expectedHeaders[key], headers[key]);
+
 			seenStatusAndHeaders = true;
 		},
 
@@ -112,3 +113,14 @@ exports['A response not yet cached is cached immediately.'] = function () {
 	assert.ok(serverResponse.ended());
 	assert.equal("<h1>test</h1>", cache.getBody(request));
 };
+
+exports['A response with status code 200 should have an appropriate etag.'] = function () {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
+
+	var request = {url: "/test10", host: "test.com"};
+	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html", "Etag": "d4843947f74305a3747dfcc0d25a38fe"}, "<h1>test</h1>");
+	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
+
+	proxymodule.process_response(request, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+}
