@@ -101,14 +101,22 @@ function process_response(request, clientResponse, serverResponse) {
 	var content = transformContent(findValue(clientResponse.headers, "content-type"), clientResponse.body);
 	var etag = hash.hashOf(content);
 
-	var headers = {}
-	for (var key in clientResponse.headers)
-		headers[key] = clientResponse.headers[key];
+	var content;
+	if(etag == findValue(request, "etag")) {
+		serverResponse.writeHead(304, {"Content-Type": "text/plain"});
+		content = "Not modified";
+	}
+	else {
+		var headers = {}
+		for (var key in clientResponse.headers)
+			headers[key] = clientResponse.headers[key];
 
-	headers['Etag'] = etag;
-	
-	serverResponse.writeHead(clientResponse.statusCode, headers);
-	cache.addBody(request, content);
+		headers['Etag'] = etag;
+
+		cache.addBody(request, content);
+		serverResponse.writeHead(clientResponse.statusCode, headers);
+	}
+
 	serverResponse.write(content, "binary");
 	serverResponse.end();
 }

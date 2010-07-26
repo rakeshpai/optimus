@@ -124,3 +124,14 @@ exports['A response with status code 200 should have an appropriate etag.'] = fu
 	proxymodule.process_response(request, clientResponse, serverResponse);
 	assert.ok(serverResponse.ended());
 }
+
+exports["A request containing an etag, received for content whose etag hasn't changed, should be served a 304 instead of requested content."] = function () {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
+
+	var request = {url: "/test10", host: "test.com", Etag: "d4843947f74305a3747dfcc0d25a38fe"};
+	var serverResponse = fakeResponseStream(304, {"Content-Type": "text/plain"}, "Not modified");
+	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
+
+	proxymodule.process_response(request, clientResponse, serverResponse);
+	assert.ok(serverResponse.ended());
+}
