@@ -105,18 +105,21 @@ function process_response(request, clientResponse, serverResponse) {
 	if(etag == findValue(request, "etag")) {
 		serverResponse.writeHead(304, {"Content-Type": "text/plain"});
 		content = "Not modified";
-	}
-	else {
+	} else {
 		var headers = {}
 		for (var key in clientResponse.headers)
 			headers[key] = clientResponse.headers[key];
 
 		headers['Etag'] = etag;
-
+		
 		serverResponse.writeHead(clientResponse.statusCode, headers);
 	}
 
-	serverResponse.write(content, "binary");
+	try {
+		serverResponse.write(content, "binary");
+	} catch(e) {
+		sys.puts("This might be a 304? " + e);
+	}
 	serverResponse.end();
 }
 
