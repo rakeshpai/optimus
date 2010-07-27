@@ -1,0 +1,27 @@
+{
+	"proxy": {
+		"ip": "127.0.0.1",
+		"port": "8080"
+	},
+	
+	"enableHtmlMinification": true,
+	
+	"htmlMinifier": {
+		"removeComments": true,
+		"removeCommentsFromCDATA": true,
+		"removeCDATASectionsFromCDATA": true,
+		"collapseWhitespace": false,
+		"collapseBooleanAttributes": true,
+		"removeAttributeQuotes": true,
+		"removeRedundantAttributes": true,
+		"useShortDoctype": true,
+		"removeEmptyAttributes": true,
+		"removeEmptyElements": false,
+		"removeOptionalTags": true,
+		"removeScriptTypeAttributes": true
+	},
+
+	"targetServer": "google.com",
+	"targetPort": 80
+}
+

@@ -19,4 +19,13 @@ var options = {
 	collapseBooleanAttributes: true
 }
 
-exports.minify = function (html) { return minifier.minify(html, options); };
+exports.minify = function (html) {
+	try {
+		return minifier.minify(html, options);
+	}
+	catch(e) {
+		console.log("ERROR while minifying: " + e.toString());
+	}
+	
+	return html;
+};

@@ -9,11 +9,14 @@ var cache = new Cache();
 
 var Buffer = require("buffer").Buffer;
 
+function openConnectionToTargetServer(request) {
+	return http.createClient(server.getSettings().targetPort, server.getSettings().targetServer).request(request.method, request.url, request.headers);
+}
+
 exports.proxy_request_handler = function (request, response) {
 	console.log("http://" + request.headers["host"] + " -- " + request.url);
 
-	var proxy = http.createClient(80, request.headers["host"]);
-	var proxy_request = proxy.request(request.method, request.url, request.headers);
+	var proxy_request = openConnectionToTargetServer(request);
 
 	var strategyIfCached = cached_response;
 	var strategyIfNotCached = function () {
@@ -111,7 +114,7 @@ function process_response(request, clientResponse, serverResponse) {
 			headers[key] = clientResponse.headers[key];
 
 		headers['Etag'] = etag;
-		
+
 		serverResponse.writeHead(clientResponse.statusCode, headers);
 	}
 

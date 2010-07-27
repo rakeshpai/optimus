@@ -138,6 +138,39 @@ exports["A request containing an etag, received for content whose etag hasn't ch
 	assert.ok(serverResponse.ended());
 }
 
+exports["All requests should be forwarded to the configured server."] = function() {
+	require('server').configure({targetServer: "test.com", targetPort: 80});
+
+	var request = {url: "/test10", host: "google.com", Etag: "d4843947f74305a3747dfcc0d25a38fe", method: "GET", headers: {name: "val"}};
+
+	proxymodule.http.createClient = function (port, host) {
+		assert.equal(80, port);
+		assert.equal("test.com", host);
+		
+		this.createClientCalled = true;
+		
+		var outer = this;
+		
+		return {
+			request: function(method, url, headers) {
+				assert.equal("GET", method);
+				assert.equal("/test10", url);
+				assert.deepEqual({name: "val"}, request.headers);
+				outer.requestCalled = true;
+				return "proxy_response";
+			}
+		}
+	};
+	
+	proxymodule.http.verify = function () {
+		assert.ok(this.createClientCalled);
+		assert.ok(this.requestCalled);
+	};
+
+	assert.equal("proxy_response", proxymodule.openConnectionToTargetServer(request));
+	proxymodule.http.verify();
+}
+
 var didIgnoreTests = false;
 for(var key in ignoredTests) {
 	didIgnoreTests = true;

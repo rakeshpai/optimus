@@ -127,12 +127,18 @@ var defaultSettings = {
 	}
 };
 
-exports.getSettings = function() {
+exports.configure = function (conf) {
+	for(var key in conf) {
+		getSettings()[key] = conf[key];
+	}
+}
+
+var getSettings = exports.getSettings = function() {
 	if(!customSettings) {
 		customSettings = {};
 
 		try {
-			fs.readFileSync(process.argv[2] || "./settings.json");
+			var data = fs.readFileSync(process.argv[2] || "./settings.json");
 			try {
 				customSettings = JSON.parse(data.toString("utf-8", 0, data.length));
 			} catch(e) {
