@@ -1,3 +1,6 @@
 [submodule "html-minifier"]
 	path = lib/html-minifier
 	url = git@github.com:finalprefix/html-minifier.git
+[submodule "lib/actlikeaduck"]
+	path = lib/actlikeaduck
+	url = git://github.com/finalprefix/actlikeaduck.git
