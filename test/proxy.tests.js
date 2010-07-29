@@ -1,12 +1,13 @@
 var sys = require('sys');
 var assert = require('assert');
 
-var ignoredTests = [];
-
 require.paths.unshift("./src");
 require.paths.unshift("./lib");
 
+var ducky = require('actlikeaduck');
 var mixin = require('mixin');
+
+var ignoredTests = [];
 
 var proxymodule = mixin.mix('./src/proxy.js', {});
 
@@ -38,18 +39,20 @@ function fakeResponseStream(expectedStatus, expectedHeaders, expectedBody) {
 	};
 }
 
-exports['The proxy should work with plain text'] = function () {
-	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/plain"}, "test");
-	var clientResponse = {statusCode: 200, body: "test", headers: {"Content-Type": "text/plain"}};
-	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-	assert.ok(serverResponse.ended());
-};
+function fakeResponseStream2(expectedStatus, expectedHeaders, expectedBody) {
+	return ducky.mock({})
+		.expect("writeHead").withArgs(expectedStatus, expectedHeaders)
+		.expect("write").withArgs(expectedBody)
+		.expect("end");
+}
 
 exports['The proxy should work with plain text'] = function () {
-	var serverResponse = fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>");
-	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
+	var serverResponseMock = fakeResponseStream2(200, {"Content-Type": "text/plain"}, "test");
+	var serverResponse = serverResponseMock.mockedObj;
+
+	var clientResponse = {statusCode: 200, body: "test", headers: {"Content-Type": "text/plain"}};
 	proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
-	assert.ok(serverResponse.ended());
+	serverResponseMock.verifyMockedCalls();
 };
 
 exports['HTML content should be minified.'] = function () {
