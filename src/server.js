@@ -138,7 +138,7 @@ var getSettings = exports.getSettings = function() {
 		customSettings = {};
 
 		try {
-			var data = fs.readFileSync(process.argv[2] || "./settings.json");
+			var data = fs.readFileSync("./settings.json");
 			try {
 				customSettings = JSON.parse(data.toString("utf-8", 0, data.length));
 			} catch(e) {
