@@ -11,35 +11,7 @@ var ignoredTests = [];
 
 var proxymodule = mixin.mix('./src/proxy.js', {});
 
-function fakeResponseStream(expectedStatus, expectedHeaders, expectedBody) {
-	var seenStatusAndHeaders, seenBody;
-	var ended = false;
-	
-	return {
-		writeHead: function(status, headers) {
-			assert.equal(expectedStatus, status);
-			for(var key in expectedHeaders)
-				assert.deepEqual(expectedHeaders[key], headers[key]);
-
-			seenStatusAndHeaders = true;
-		},
-
-		write: function(chunk, encoding) {
-			assert.equal(expectedBody, chunk);
-			seenBody = true;
-		},
-
-		end: function() {
-			assert.ok(seenStatusAndHeaders, "Should have seen response headers and status");
-			assert.ok(seenBody, "Should have seen response body");
-			ended = true;
-		},
-
-		ended: function() { return ended; },
-	};
-}
-
-function fakeResponseStream2(expectedStatus, expectedHeaders, expectedBody, test) {
+function fakeResponseStream(expectedStatus, expectedHeaders, expectedBody, test) {
 	ducky.mock({})
 		.expect("writeHead").withArgs(expectedStatus, expectedHeaders)
 		.expect("write").withArgs(expectedBody, "binary")
@@ -48,7 +20,7 @@ function fakeResponseStream2(expectedStatus, expectedHeaders, expectedBody, test
 }
 
 exports['The proxy should work with plain text'] = function () {
-	fakeResponseStream2(200, {"Content-Type": "text/plain"}, "test",
+	fakeResponseStream(200, {"Content-Type": "text/plain"}, "test",
 		function (serverResponse, mock) {
 			var clientResponse = {statusCode: 200, body: "test", headers: {"Content-Type": "text/plain"}};
 			proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
@@ -56,7 +28,7 @@ exports['The proxy should work with plain text'] = function () {
 };
 
 exports['HTML content should be minified.'] = function () {
-	fakeResponseStream2(200, {"Content-Type": "text/html"}, "<a href=test.html\>test</a>",
+	fakeResponseStream(200, {"Content-Type": "text/html"}, "<a href=test.html\>test</a>",
 		function(serverResponse, mock) {
 			var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"Content-Type": "text/html"}};
 			proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
@@ -64,7 +36,7 @@ exports['HTML content should be minified.'] = function () {
 };
 
 exports['All headers in the response to the proxied request should be sent to the client'] = function () {
-	fakeResponseStream2(200, {"Content-Type": "TEXT/HTML"}, "<a href=test.html>test</a>",
+	fakeResponseStream(200, {"Content-Type": "TEXT/HTML"}, "<a href=test.html>test</a>",
 		function(serverResponse) {
 			var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"Content-Type": "TEXT/HTML"}};
 			proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
@@ -72,7 +44,7 @@ exports['All headers in the response to the proxied request should be sent to th
 };
 
 exports['The Content-Type header should be found even if it\'s all in small case.'] = function () {
-	fakeResponseStream2(200, {"content-type": "TEXT/HTML"}, "<a href=test.html>test</a>",
+	fakeResponseStream(200, {"content-type": "TEXT/HTML"}, "<a href=test.html>test</a>",
 		function(serverResponse) {
 			var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"content-type": "TEXT/HTML"}};
 			proxymodule.process_response({url: "/test", host: "test.com"}, clientResponse, serverResponse);
@@ -109,7 +81,7 @@ exports['A cached response gets correctly served by the cached response handler.
 	var request = {url: "/test", host: "test.com"};
 	cache.addBody(request, "<a href=test.html>test</a>");
 
-	fakeResponseStream2(200, {"Content-Type": "text/html"}, "<a href=test.html>test</a>",
+	fakeResponseStream(200, {"Content-Type": "text/html"}, "<a href=test.html>test</a>",
 		function(serverResponse) {
 			proxymodule.cached_response(request, serverResponse);
 		});
@@ -122,7 +94,7 @@ ignoredTests['A response not yet cached is cached immediately.'] = function () {
 	var request = {url: "/test10", host: "test.com"};
 	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
 
-	fakeResponseStream2(200, {"Content-Type": "text/html"}, "<h1>test</h1>",
+	fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
@@ -136,7 +108,7 @@ exports['A response with status code 200 should have an appropriate etag.'] = fu
 	var request = {url: "/test10", host: "test.com"};
 	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
 
-	fakeResponseStream2(200, {"Content-Type": "text/html", "Etag": "d4843947f74305a3747dfcc0d25a38fe"}, "<h1>test</h1>",
+	fakeResponseStream(200, {"Content-Type": "text/html", "Etag": "d4843947f74305a3747dfcc0d25a38fe"}, "<h1>test</h1>",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
@@ -148,7 +120,7 @@ exports["A request containing an etag, received for content whose etag hasn't ch
 	var request = {url: "/test10", host: "test.com", Etag: "d4843947f74305a3747dfcc0d25a38fe"};
 	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
 
-	fakeResponseStream2(304, {"Content-Type": "text/plain"}, "Not modified",
+	fakeResponseStream(304, {"Content-Type": "text/plain"}, "Not modified",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
