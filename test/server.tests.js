@@ -18,39 +18,34 @@ function fileSystemErrorMessage(path) {
 	};
 }
 
-var fakeFileSystem = {
-	stat: function(name, callback) {
-		if(name == "./test.html" ||
-		   name == "./hello/world.html") {
-			callback(undefined, { isDirectory: function () { return true; }, isFile: function () { return true; }});
-		}
-		else if (name == "./hello" ||
-		         name == "./hello/") {
-			callback(undefined, { isDirectory: function () { return true; }, isFile: function () { return false; }});
-		}
-		else {
-			callback(new fileSystemErrorMessage(name), undefined);
-		}
-	},
-
-	readFile: function(path) {
-		var callback = arguments[1];
-
-		if(arguments.length == 3)
-			callback = arguments[2];
-
-		if(path == "./test.html")
-			callback(undefined, "test data");
-		else if (path == "./hello/world.html")
-			callback(undefined, "hi");
-		else
-			callback(new fakeFileSystem(path), undefined);
-	},
-
-	readdir: function(path, callback) {
-		callback(undefined, ["world.html"]);
-	}
-};
+var fakeFileSystem = actlikeaduck.stub({})
+		.expect("stat").withArgs("./test.html", function () {}).executeCallback(1, undefined,
+																actlikeaduck.stub({})
+																	.expect("isDirectory").andReturn(false)
+																	.expect("isFile").andReturn(true)
+																	.stubbedObj)
+		.expect("stat").withArgs("./hello/world.html", function () {}).executeCallback(1, undefined,
+																actlikeaduck.stub({})
+																	.expect("isDirectory").andReturn(false)
+																	.expect("isFile").andReturn(true)
+																	.stubbedObj)
+		.expect("stat").withArgs("./hello/", function () {}).executeCallback(1, undefined,
+																actlikeaduck.stub({})
+																	.expect("isDirectory").andReturn(true)
+																	.expect("isFile").andReturn(false)
+																	.stubbedObj)
+		.expect("stat").withArgs("./hello", function () {}).executeCallback(1, undefined,
+																actlikeaduck.stub({})
+																	.expect("isDirectory").andReturn(true)
+																	.expect("isFile").andReturn(false)
+																	.stubbedObj)
+		.expect("stat").withUnexpectedArgs().executeCallback(1, new fileSystemErrorMessage("file not found"), undefined)
+		.expect("readFile").withArgs("./test.html", "utf-8", function() {}).executeCallback(2, undefined, "test data")
+		.expect("readFile").withArgs("./hello/world.html", "utf-8", function() {}).executeCallback(2, undefined, "hi")
+		.expect("readFile").withUnexpectedArgs().executeCallback(2, undefined, new fileSystemErrorMessage("file not found"))
+		.expect("readdir").withArgs("./hello", function() {}).executeCallback(1, undefined, ["world.html"])
+		.expect("readdir").withArgs("./hello/", function() {}).executeCallback(1, undefined, ["world.html"])
+		.stubbedObj;
 
 var servermodule = mixin.mix("./src/server.js", {fs: fakeFileSystem});
 
