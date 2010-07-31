@@ -2,6 +2,8 @@ var fs = require('fs');
 var sys = require('sys');
 var assert = require('assert');
 
+var actlikeaduck = require('actlikeaduck');
+
 require.paths.unshift("./src");
 require.paths.unshift("./lib");
 
@@ -52,31 +54,12 @@ var fakeFileSystem = {
 
 var servermodule = mixin.mix("./src/server.js", {fs: fakeFileSystem});
 
-function fakeResponseStream(expectedStatus, expectedHead, expectedBody) {
-	var seenStatusAndHeaders, seenBody;
-	var ended = false;
-
-	return {
-		writeHead: function(status, headers) {
-			assert.equal(expectedStatus, status);
-			assert.deepEqual(expectedHead, headers);
-
-			seenStatusAndHeaders = true;
-		},
-
-		write: function(chunk, encoding) {
-			assert.equal(expectedBody, chunk);
-			seenBody = true;
-		},
-
-		end: function() {
-			assert.ok(seenStatusAndHeaders, "Should have seen response headers and status");
-			assert.ok(seenBody, "Should have seen response body");
-			ended = true;
-		},
-
-		ended: function() { return ended; }
-	};
+function fakeResponseStream(expectedStatus, expectedHead, expectedBody, test) {
+	actlikeaduck.mock({})
+		.expect("writeHead").withArgs(expectedStatus, expectedHead)
+		.expect("write").withArgs(expectedBody)
+		.expect("end")
+		.playback(test);
 }
 
 var htmlContentTypeResponseHeader = {"Content-Type": "text/html"};
@@ -87,7 +70,10 @@ function requestForUrl(url) {
 
 var testRequest = (function (context) {
 	return function(url, status, headers, response) {
-		context.requestProcessor(requestForUrl(url), fakeResponseStream(status, headers, response));
+		fakeResponseStream(status, headers, response,
+			function(responseStream) {
+				context.requestProcessor(requestForUrl(url), responseStream);
+			});
 	};
 })(servermodule);
 
@@ -127,17 +113,31 @@ exports['If requested for a cached url, the cached response should be returned.'
 	assert.equal("test cached data", cache.getBody(req));
 };
 
-exports['When a request for an uncached url is received, it should be cached immediately. After that, the cached response should be returned.'] = function () {
+function callOnce(fn) {
 	var timesItHappened = 0;
 
-	var nextHandler = function(req, res) { servermodule.cache.addBody(req, "cached data"); timesItHappened ++; assert.equal(1, timesItHappened); };
-
-	for(var i = 0; i < 2; i ++) {
-		servermodule.cachingRequestProcessor(requestForUrl("cached-data.html"), fakeResponseStream(200, htmlContentTypeResponseHeader, "cached data"), nextHandler);
-	}
+	return function () {
+		fn.apply(null, arguments);
+		timesItHappened ++; assert.equal(1, timesItHappened);
+	};
 
 	assert.equal(1, timesItHappened);
+}
 
-	servermodule.fileSystemRequestProcessor(requestForUrl("/test.html"), fakeResponseStream(200, htmlContentTypeResponseHeader, "test data"));
-	assert.ok(servermodule.cache.has(requestForUrl("/test.html")));
+exports['When a request for an uncached url is received, it should be cached immediately. After that, the cached response should be returned.'] = function () {
+	var nextHandler = callOnce(function(req, res) { servermodule.cache.addBody(req, "cached data"); });
+
+	fakeResponseStream(200, htmlContentTypeResponseHeader, "cached data",
+		function(responseStream) {
+			for(var i = 0; i < 2; i ++) {
+				servermodule.cachingRequestProcessor(requestForUrl("cached-data.html"), responseStream, nextHandler);
+			}
+		});
+
+	fakeResponseStream(200, htmlContentTypeResponseHeader, "test data",
+		function(responseStream) {
+			servermodule.fileSystemRequestProcessor(requestForUrl("/test.html"), responseStream);
+		});
+
+	assert.ok(servermodule.cache.has(requestForUrl("/test.html")), "The response to a request for /test.html should be cached if it is seen for the first time.");
 };
