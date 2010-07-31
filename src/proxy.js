@@ -18,43 +18,38 @@ exports.proxy_request_handler = function (request, response) {
 
 	var proxy_request = openConnectionToTargetServer(request);
 
-	var strategyIfCached = cached_response;
-	var strategyIfNotCached = function () {
-		proxy_request.on("response", function (proxy_response) {
-			var bufferSize = 64 * 1024;
-			var bufferPos = 0;
-			var buffer = new Buffer(bufferSize);
-			
-			proxy_response.setEncoding("binary");
+	proxy_request.on("response", function (proxy_response) {
+		var bufferSize = 64 * 1024;
+		var bufferPos = 0;
+		var buffer = new Buffer(bufferSize);
+		
+		proxy_response.setEncoding("binary");
 
-			proxy_response.on("data", function(chunk) {
-				var bufferNextPos = bufferPos + chunk.length;
-				if(bufferNextPos > bufferSize) {
-					sys.puts("Current buffer size: " + bufferSize);
-					bufferSize = (Math.ceil(bufferNextPos / (64*1024)) + 1) * 64 * 1024;	// Add units of 64 KiB to accomodate the chunk
-					sys.puts("Buffer size bumped up to : " + bufferSize)
-					var tempBufferValue = buffer.toString("binary", 0, bufferPos);
-					buffer = new Buffer(bufferSize);
-					buffer.write(tempBufferValue, "binary");
-				}
-				buffer.write(chunk, "binary", bufferPos);
-				bufferPos += chunk.length;
-			});
-			proxy_response.on("end", function() {
-				proxy_response.body = buffer.toString("binary", 0, bufferPos);
-				process_response(request, proxy_response, response);
-			});
+		proxy_response.on("data", function(chunk) {
+			var bufferNextPos = bufferPos + chunk.length;
+			if(bufferNextPos > bufferSize) {
+				sys.puts("Current buffer size: " + bufferSize);
+				bufferSize = (Math.ceil(bufferNextPos / (64*1024)) + 1) * 64 * 1024;	// Add units of 64 KiB to accomodate the chunk
+				sys.puts("Buffer size bumped up to : " + bufferSize)
+				var tempBufferValue = buffer.toString("binary", 0, bufferPos);
+				buffer = new Buffer(bufferSize);
+				buffer.write(tempBufferValue, "binary");
+			}
+			buffer.write(chunk, "binary", bufferPos);
+			bufferPos += chunk.length;
 		});
+		proxy_response.on("end", function() {
+			proxy_response.body = buffer.toString("binary", 0, bufferPos);
+			process_response(request, proxy_response, response);
+		});
+	});
 
-		request.on("data", function(chunk) {
-			proxy_request.write(chunk, "binary");
-		});
-		request.on("end", function() {
-			proxy_request.end();
-		});
-	};
-
-	process_request(request, response, strategyIfCached, strategyIfNotCached);
+	request.on("data", function(chunk) {
+		proxy_request.write(chunk, "binary");
+	});
+	request.on("end", function() {
+		proxy_request.end();
+	});
 }
 
 function cached_response (request, response) {
@@ -100,36 +95,47 @@ function findValue(headers, name) {
 	return "";
 }
 
-function process_response(request, clientResponse, serverResponse) {
-	var content = transformContent(findValue(clientResponse.headers, "content-type"), clientResponse.body);
-	var etag = hash.hashOf(content);
-
-	var content;
-	if(etag == findValue(request, "etag")) {
-		serverResponse.writeHead(304, {"Content-Type": "text/plain"});
-		content = "Not modified";
-	} else {
-		var headers = {}
-		for (var key in clientResponse.headers)
-			headers[key] = clientResponse.headers[key];
-
-		headers['Etag'] = etag;
-
-		serverResponse.writeHead(clientResponse.statusCode, headers);
+function prepareResponseHeaders(headers) {
+	var newHeaders = {}, headersToDrop = ["etag", "last-modified", "accept-ranges", "content-length", "connection"]
+	for (var key in headers) {
+		if(headersToDrop.indexOf(key) === -1){
+			newHeaders[key] = headers[key];
+		}
 	}
-
-	try {
-		serverResponse.write(content, "binary");
-	} catch(e) {
-		sys.puts("This might be a 304? " + e);
-	}
-	serverResponse.end();
+	
+	newHeaders["transfer-encoding"] = "chunked";
+	
+	return newHeaders;
 }
 
-function process_request(request, response, ifCached, ifNotCached) {
-	if(cache.has(request)) {
-		ifCached(request, response);
+function process_response(request, clientResponse, serverResponse) {
+	var responseBody = clientResponse.body;
+	var responseHash = hash.hashOf(responseBody);
+	var contentType = findValue(clientResponse.headers, "content-type");
+	
+	//console.log("Computed hash: " + responseHash);
+	if(responseHash == findValue(request, "etag")) {
+		//console.log("Sending a 304");
+		serverResponse.writeHead(304, {"Content-Type": contentType});
 	} else {
-		ifNotCached(request, response);
+		var headers = prepareResponseHeaders(clientResponse.headers)
+
+		headers.etag = responseHash;
+		
+		serverResponse.writeHead(clientResponse.statusCode, headers);
+		
+		//console.log("Server headers: " + JSON.stringify(clientResponse.headers));
+		//console.log("Headers being flushed: " + JSON.stringify(headers));
+		if(cache.has(responseHash)) {
+			console.log("Responding with data from cache");
+			serverResponse.write(cache.get(responseHash), "binary");
+		} else {
+			console.log("Responding with data transformed");
+			var transformedContent = transformContent(contentType, responseBody)
+			serverResponse.write(transformedContent, "binary");
+			cache.set(responseHash, transformedContent);
+		}
 	}
+	
+	serverResponse.end();
 }

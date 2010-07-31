@@ -4,21 +4,17 @@ function Cache() {
 (function () {
 	var cache = {};
 	
-	function cacheKey(req) {
-		return req.method + ',' + req.url;
-	}
-	
 	Cache.prototype = {
-		has: function(req) {
-			return cache.hasOwnProperty(cacheKey(req));
+		has: function(key) {
+			return cache.hasOwnProperty(key);
 		},
 
-		addBody: function(req, value) {
-			cache[cacheKey(req)] = value;
+		set: function(key, value) {
+			cache[key] = value;
 		},
 
-		getBody: function(req) {
-			return cache[cacheKey(req)];
+		get: function(key) {
+			return cache[key];
 		}
 	};
 })();
