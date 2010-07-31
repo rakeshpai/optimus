@@ -42,7 +42,7 @@ function fakeResponseStream(expectedStatus, expectedHeaders, expectedBody) {
 function fakeResponseStream2(expectedStatus, expectedHeaders, expectedBody) {
 	return ducky.mock({})
 		.expect("writeHead").withArgs(expectedStatus, expectedHeaders)
-		.expect("write").withArgs(expectedBody)
+		.expect("write").withArgs(expectedBody, "binary")
 		.expect("end");
 }
 
