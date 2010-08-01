@@ -66,19 +66,35 @@ exports['A cached response gets correctly served from cache.'] = function() {
 		});
 };
 
-ignoredTests['A response not yet cached is cached immediately.'] = function () {
+exports['A response not yet cached is transformed and cached before being served.'] = function () {
 	var proxymodule = mixin.mix('./src/proxy.js', {});
 	var cache = proxymodule.cache;
 
 	var request = {url: "/test10", host: "test.com"};
-	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
+	var clientResponse = {statusCode: 200, body: "<h1                  >test</h1>", headers: {"Content-Type": "text/html"}};
 
 	fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
 
-	assert.equal("<h1>test</h1>", cache.getBody(request));
+	assert.equal("<h1>test</h1>", cache.get("d7a0c80a5b212464a9e5c9c7411da6d2"));
+};
+
+exports['The transformed version of a response is served from cache, if available.'] = function () {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
+	var cache = proxymodule.cache;
+
+	var request = {url: "/test10", host: "test.com"};
+	var clientResponse = {statusCode: 200, body: "<h1                  >test</h1>", headers: {"Content-Type": "text/html"}};
+
+	cache.set('d7a0c80a5b212464a9e5c9c7411da6d2', '<h1>test</h1>');
+	cache.set = function() { throw new Error("cache.set should not have been called."); };
+
+	fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>",
+		function(serverResponse) {
+			proxymodule.process_response(request, clientResponse, serverResponse);
+		});
 };
 
 exports['A response with status code 200 should have an appropriate etag.'] = function () {
