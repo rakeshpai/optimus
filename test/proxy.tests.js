@@ -73,7 +73,22 @@ exports['A response not yet cached is transformed and cached before being served
 	var request = {url: "/test10", host: "test.com"};
 	var clientResponse = {statusCode: 200, body: "<h1                  >test</h1>", headers: {"Content-Type": "text/html"}};
 
-	fakeResponseStream(200, {"Content-Type": "text/html"}, "<h1>test</h1>",
+	fakeResponseStream(200, {"Content-Type": "text/html", "transfer-encoding": "chunked"}, "<h1>test</h1>",
+		function(serverResponse) {
+			proxymodule.process_response(request, clientResponse, serverResponse);
+		});
+
+	assert.equal("<h1>test</h1>", cache.get("d7a0c80a5b212464a9e5c9c7411da6d2"));
+};
+
+exports['Proxied response headers get sanitized before being forwarded to the client.'] = function () {
+	var proxymodule = mixin.mix('./src/proxy.js', {});
+	var cache = proxymodule.cache;
+
+	var request = {url: "/test10", host: "test.com"};
+	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}, etag: "tag", "last-modified": "time", "accept-ranges": "stuff", "content-length": "stuff", "connection": "stuff"};
+
+	fakeResponseStream(200, {"Content-Type": "text/html", "transfer-encoding": "chunked"}, "<h1>test</h1>",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
