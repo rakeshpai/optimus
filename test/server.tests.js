@@ -98,16 +98,6 @@ exports['If a requested file does not exist, the response should be a 404.'] = f
 	testRequest("/file-does-not-exist.html", 404, {"Content-Type": "text/plain"}, "/file-does-not-exist.html - File not found");
 };
 
-exports['If requested for a cached url, the cached response should be returned.'] = function () {
-	var cache = new servermodule.Cache();
-	var req = requestForUrl("/test.html");
-
-	cache.addBody(req, "test cached data");
-
-	assert.ok(cache.has(req));
-	assert.equal("test cached data", cache.getBody(req));
-};
-
 function callOnce(fn) {
 	var timesItHappened = 0;
 
@@ -118,21 +108,3 @@ function callOnce(fn) {
 
 	assert.equal(1, timesItHappened);
 }
-
-exports['When a request for an uncached url is received, it should be cached immediately. After that, the cached response should be returned.'] = function () {
-	var nextHandler = callOnce(function(req, res) { servermodule.cache.addBody(req, "cached data"); });
-
-	fakeResponseStream(200, htmlContentTypeResponseHeader, "cached data",
-		function(responseStream) {
-			for(var i = 0; i < 2; i ++) {
-				servermodule.cachingRequestProcessor(requestForUrl("cached-data.html"), responseStream, nextHandler);
-			}
-		});
-
-	fakeResponseStream(200, htmlContentTypeResponseHeader, "test data",
-		function(responseStream) {
-			servermodule.fileSystemRequestProcessor(requestForUrl("/test.html"), responseStream);
-		});
-
-	assert.ok(servermodule.cache.has(requestForUrl("/test.html")), "The response to a request for /test.html should be cached if it is seen for the first time.");
-};

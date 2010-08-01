@@ -65,14 +65,12 @@ function fileSystemRequestProcessor(req, res) {
 	fs.stat(fileresource, withErrorHandling(function(stats) {
 		if(stats.isFile()) {
 			fs.readFile(fileresource, "utf-8", withErrorHandling(function (data) {
-				cache.addBody(req, data);
 				writeHTML(res, data);
 			}));
 		}
 		else if (stats.isDirectory()) {
 			fs.readdir(fileresource, withErrorHandling(function(files) {
 				var content = formatFileListAsHTML(req.url, files);
-				cache.addBody(req, content);
 				writeHTML(res, content);
 			}));
 		}
@@ -82,7 +80,6 @@ function fileSystemRequestProcessor(req, res) {
 function cachingRequestProcessor (req, res, nextHandler) {
 	if(cache.has(req))
 	{
-		sys.log("Cached: " + req.method + " " + req.url)
 		writeHTML(res, cache.getBody(req));
 	}
 	else
