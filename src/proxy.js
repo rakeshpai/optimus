@@ -113,10 +113,9 @@ function process_response(request, clientResponse, serverResponse) {
 	var responseHash = hash.hashOf(responseBody);
 	var contentType = findValue(clientResponse.headers, "content-type");
 	
-	//console.log("Computed hash: " + responseHash);
 	if(responseHash == findValue(request, "etag")) {
-		//console.log("Sending a 304");
-		serverResponse.writeHead(304, {"Content-Type": contentType});
+		serverResponse.writeHead(304, {"Content-Type": "text/plain"});
+		serverResponse.write("Not modified", "binary");
 	} else {
 		var headers = prepareResponseHeaders(clientResponse.headers)
 
@@ -124,8 +123,6 @@ function process_response(request, clientResponse, serverResponse) {
 		
 		serverResponse.writeHead(clientResponse.statusCode, headers);
 		
-		//console.log("Server headers: " + JSON.stringify(clientResponse.headers));
-		//console.log("Headers being flushed: " + JSON.stringify(headers));
 		if(cache.has(responseHash)) {
 			console.log("Responding with data from cache");
 			serverResponse.write(cache.get(responseHash), "binary");

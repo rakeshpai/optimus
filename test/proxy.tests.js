@@ -51,39 +51,18 @@ exports['The Content-Type header should be found even if it\'s all in small case
 		});
 };
 
-exports['A request should attempt to proxy the request if not cached, else attempt to serve the cached response.'] = function() {
+exports['A cached response gets correctly served from cache.'] = function() {
 	var proxymodule = mixin.mix('./src/proxy.js', {});
 	var cache = proxymodule.cache;
 
-	var clientResponse = {statusCode: 200, body: "<a           href=\"test.html\"  >test</a>", headers: {"content-type": "TEXT/HTML"}};
-	var called = [];
+	var request = {url: "/test", host: "test.com", etag: 'd4332e8cb0bd997858b92860bf39394e'};
+	var content = "<a href=test.html>test</a>";
+	var responseHash = 'd4332e8cb0bd997858b92860bf39394e';
+	cache.set(responseHash, "<a href=test.html>test</a>");
 
-	var ifCached = function (serverRequest, serverResponse) {
-		assert.equal("notcached", called[0]); called[called.length] = "cached";
-	};
-	
-	var ifNotCached = function (serverRequest, serverResponse) {
-		called[called.length] = "notcached"; cache.addBody(serverRequest);
-	};
-
-	var serverResponse = {};
-
-	proxymodule.process_request({url: "/check-cached", host: "test.com"}, serverResponse, ifCached, ifNotCached);
-	proxymodule.process_request({url: "/check-cached", host: "test.com"}, serverResponse, ifCached, ifNotCached);
-
-	assert.equal("cached", called[1]);
-};
-
-exports['A cached response gets correctly served by the cached response handler.'] = function() {
-	var proxymodule = mixin.mix('./src/proxy.js', {});
-	var cache = proxymodule.cache;
-
-	var request = {url: "/test", host: "test.com"};
-	cache.addBody(request, "<a href=test.html>test</a>");
-
-	fakeResponseStream(200, {"Content-Type": "text/html"}, "<a href=test.html>test</a>",
+	fakeResponseStream(304, {"Content-Type": "text/plain"}, "Not modified",
 		function(serverResponse) {
-			proxymodule.cached_response(request, serverResponse);
+			proxymodule.process_response(request, {body: "<a   href=test.html>test</a>", headers: {"Content-Type": "text/html"}}, serverResponse);
 		});
 };
 
@@ -108,7 +87,7 @@ exports['A response with status code 200 should have an appropriate etag.'] = fu
 	var request = {url: "/test10", host: "test.com"};
 	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
 
-	fakeResponseStream(200, {"Content-Type": "text/html", "Etag": "d4843947f74305a3747dfcc0d25a38fe"}, "<h1>test</h1>",
+	fakeResponseStream(200, {"Content-Type": "text/html", 'transfer-encoding': 'chunked', "etag": "d4843947f74305a3747dfcc0d25a38fe"}, "<h1>test</h1>",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
@@ -120,7 +99,7 @@ exports["A request containing an etag, received for content whose etag hasn't ch
 	var request = {url: "/test10", host: "test.com", Etag: "d4843947f74305a3747dfcc0d25a38fe"};
 	var clientResponse = {statusCode: 200, body: "<h1>test</h1>", headers: {"Content-Type": "text/html"}};
 
-	fakeResponseStream(304, {"Content-Type": "text/plain"}, "Not modified",
+	fakeResponseStream(304, {"Content-Type": "text/plain", }, "Not modified",
 		function(serverResponse) {
 			proxymodule.process_response(request, clientResponse, serverResponse);
 		});
