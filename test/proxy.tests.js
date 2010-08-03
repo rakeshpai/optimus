@@ -7,6 +7,8 @@ require.paths.unshift("./lib");
 var ducky = require('actlikeaduck');
 var mixin = require('mixin');
 
+var EventEmitter = require('events').EventEmitter;
+
 var ignoredTests = [];
 
 var proxymodule = mixin.mix('./src/proxy.js', {});
@@ -151,6 +153,63 @@ exports["All requests should be forwarded to the configured server."] = function
 				});
 		});
 }
+
+function expectingOutboundHttpRequest(httpapi, host, port, method, url, headers, test) {
+	var connectionToTarget = new EventEmitter();
+
+	var requestToTarget = new EventEmitter();
+
+	ducky.stub(requestToTarget).expect("end");
+
+	var connectionToTargetMock = ducky.mock(connectionToTarget)
+		.expect("request").withArgs(method, url, headers).andReturn(requestToTarget);
+
+	var httpapiMock = ducky.mock(httpapi).expect("createClient").withArgs(port, host).andReturn(connectionToTarget);
+	
+	test(requestToTarget);
+	
+	httpapiMock.verifyMockedCalls();
+	connectionToTargetMock.verifyMockedCalls();
+}
+
+function newInboundHttpRequest(request) {
+	var EventEmitter = new require('events').EventEmitter;
+
+	var requestFromClient = new EventEmitter();
+
+	requestFromClient.url = request.url;
+	requestFromClient.host = request.host;
+	requestFromClient.etag = request.etag;
+	requestFromClient.method = request.method;
+	requestFromClient.headers = request.headers;
+
+	return requestFromClient;
+}
+
+exports['When forwarding to a target server, data is shuttled to it, and the response is accumulated. '] = function () {
+	require('server').configure({targetServer: "test.com", targetPort: 80});
+
+	var requestFromClient = newInboundHttpRequest({url: "/test10", host: "google.com", Etag: "d4843947f74305a3747dfcc0d25a38fe", method: "GET", headers: {name: "val"}});
+
+	var fn = ducky.expectACall(1, function (response) {
+		assert.equal(response.body, "hello world");
+	});
+
+	expectingOutboundHttpRequest(proxymodule.http, "test.com", 80, "GET", "/test10", requestFromClient.headers,
+		function(requestToTarget) {
+			var response = new EventEmitter();
+			ducky.stub(response).expect("setEncoding").withArgs("binary");
+			
+			proxymodule.forwardToTargetServer(requestFromClient, fn);
+
+			requestToTarget.emit("response", response);
+		
+			response.emit("data", "hello world");
+			response.emit("end");
+		});
+			
+	fn.verifyCall();
+};
 
 var didIgnoreTests = false;
 for(var key in ignoredTests) {

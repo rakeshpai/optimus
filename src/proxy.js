@@ -13,9 +13,7 @@ function openConnectionToTargetServer(request) {
 	return http.createClient(server.getSettings().targetPort, server.getSettings().targetServer).request(request.method, request.url, request.headers);
 }
 
-exports.proxy_request_handler = function (request, response) {
-	console.log("http://" + request.headers["host"] + " -- " + request.url);
-
+function forwardToTargetServer(request, responseHandler) {
 	var proxy_request = openConnectionToTargetServer(request);
 
 	proxy_request.on("response", function (proxy_response) {
@@ -40,7 +38,7 @@ exports.proxy_request_handler = function (request, response) {
 		});
 		proxy_response.on("end", function() {
 			proxy_response.body = buffer.toString("binary", 0, bufferPos);
-			process_response(request, proxy_response, response);
+			responseHandler(proxy_response);
 		});
 	});
 
@@ -50,6 +48,14 @@ exports.proxy_request_handler = function (request, response) {
 	request.on("end", function() {
 		proxy_request.end();
 	});
+}
+
+exports.proxy_request_handler = function (request, response) {
+	console.log("http://" + request.headers["host"] + " -- " + request.url);
+	
+	forwardToTargetServer(request, function (target_server_response) {
+		proxy_response(request, target_server_response, response);
+	})
 }
 
 function cached_response (request, response) {
